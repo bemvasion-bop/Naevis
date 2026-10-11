@@ -1,10 +1,13 @@
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
+from supabase import create_client
+from xgboost import XGBClassifier
 import pandas as pd
 import joblib
-from xgboost import XGBClassifier
 import os
-
+import math
 
 # --------------------------------------------------
 # Flask application
@@ -13,29 +16,42 @@ import os
 app = Flask(__name__)
 CORS(app)
 
+# --------------------------------------------------
+# Environment variables and Supabase connection
+# --------------------------------------------------
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+
+load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise RuntimeError(
+        "Missing SUPABASE_URL or SUPABASE_KEY in the root .env file."
+    )
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --------------------------------------------------
 # Load trained NAEVIS files
 # --------------------------------------------------
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 MODEL_PATH = os.path.join(BASE_DIR, "naevis_xgboost_model.json")
 PREPROCESSOR_PATH = os.path.join(BASE_DIR, "naevis_preprocessor.pkl")
 LABEL_ENCODER_PATH = os.path.join(BASE_DIR, "naevis_label_encoder.pkl")
 
-
-# Load the XGBoost model from its native JSON format
 model = XGBClassifier()
 model.load_model(MODEL_PATH)
 
-# Load preprocessing and target label encoder
 preprocessor = joblib.load(PREPROCESSOR_PATH)
 label_encoder = joblib.load(LABEL_ENCODER_PATH)
 
-
 print("NAEVIS model loaded successfully!")
 print("Target classes:", list(label_encoder.classes_))
+print("Supabase client initialized successfully!")
 
 
 # --------------------------------------------------
@@ -47,6 +63,7 @@ def home():
     return jsonify({
         "message": "NAEVIS API is running!",
         "model": "XGBoost",
+        "database": "Supabase",
         "status": "ready"
     })
 
@@ -57,129 +74,140 @@ def home():
 
 @app.route("/predict", methods=["POST"])
 def predict():
-
     try:
-        # Get JSON data from frontend
-        data = request.get_json()
+        data = request.get_json(silent=True)
 
-        if not data:
+        if not isinstance(data, dict) or not data:
+            return jsonify({"error": "Please provide vehicle data as JSON."}), 400
+
+        required_fields = [
+            "vehicle_type",
+            "mileage",
+            "fuel_consumption",
+            "engine_temperature",
+            "maintenance_history",
+            "usage_frequency",
+            "load_weight",
+            "vehicle_age",
+            "breakdown_history"
+        ]
+
+        missing_fields = [
+            field for field in required_fields
+            if field not in data or data[field] is None
+            or data[field] == ""
+        ]
+
+        if missing_fields:
             return jsonify({
-                "error": "No data received."
+                "error": "Missing required fields.",
+                "fields": missing_fields
             }), 400
 
+        # Build input using the original model feature names
+        numeric_fields = required_fields[1:]
 
-        # --------------------------------------------------
-        # Create DataFrame using the SAME feature names
-        # used during model training
-        # --------------------------------------------------
+        input_values = {"vehicle_type": str(data["vehicle_type"]).strip()}
 
-        input_data = pd.DataFrame([{
-            "vehicle_type": data.get("vehicle_type"),
+        for field in numeric_fields:
+            try:
+                value = float(data[field])
+            except (TypeError, ValueError):
+                return jsonify({
+                    "error": f"{field} must be a valid number."
+                }), 400
 
-            "mileage": float(data.get("mileage")),
-            "fuel_consumption": float(data.get("fuel_consumption")),
-            "engine_temperature": float(data.get("engine_temperature")),
-            "maintenance_history": float(data.get("maintenance_history")),
-            "usage_frequency": float(data.get("usage_frequency")),
-            "load_weight": float(data.get("load_weight")),
-            "vehicle_age": float(data.get("vehicle_age")),
-            "breakdown_history": float(data.get("breakdown_history"))
-        }])
+            if not math.isfinite(value) or value < 0:
+                return jsonify({
+                    "error": f"{field} must be a finite, non-negative number."
+                }), 400
 
+            input_values[field] = value
 
-        # --------------------------------------------------
-        # Apply the SAME preprocessing used during training
-        # --------------------------------------------------
+        input_data = pd.DataFrame([input_values])
 
+        # Apply trained preprocessing
         processed_data = preprocessor.transform(input_data)
 
-
-        # --------------------------------------------------
-        # Make prediction
-        # --------------------------------------------------
-
+        # Predict vehicle condition
         prediction_encoded = model.predict(processed_data)[0]
+        prediction = str(
+            label_encoder.inverse_transform([prediction_encoded])[0]
+        )
 
-        prediction = label_encoder.inverse_transform(
-            [prediction_encoded]
-        )[0]
-
-
-        # --------------------------------------------------
-        # Get prediction probabilities
-        # --------------------------------------------------
-
+        # Calculate class probabilities
         probabilities_raw = model.predict_proba(processed_data)[0]
 
         probabilities = {
-            label: round(float(probability * 100), 2)
+            str(label): round(float(probability * 100), 2)
             for label, probability
             in zip(label_encoder.classes_, probabilities_raw)
         }
 
-
-        # --------------------------------------------------
         # Generate recommendation
-        # --------------------------------------------------
-
-        if prediction == "Good Condition":
-
-            recommendation = (
+        recommendations = {
+            "Good Condition": (
                 "The vehicle is currently in good condition. "
                 "Continue regular inspections and preventive maintenance "
                 "according to the recommended maintenance schedule."
-            )
-
-        elif prediction == "Monitor":
-
-            recommendation = (
+            ),
+            "Monitor": (
                 "The vehicle should be monitored closely. "
                 "Consider scheduling an inspection and checking "
                 "maintenance-related indicators to prevent further issues."
-            )
-
-        elif prediction == "Needs Maintenance":
-
-            recommendation = (
+            ),
+            "Needs Maintenance": (
                 "The vehicle requires maintenance attention. "
                 "A maintenance inspection is recommended as soon as possible "
                 "to identify and address potential issues."
             )
+        }
 
-        else:
+        recommendation = recommendations.get(
+            prediction,
+            "No specific recommendation is available for this prediction."
+        )
 
-            recommendation = (
-                "No specific recommendation is available for this prediction."
-            )
+        # Save input and prediction to Supabase
+        assessment = {
+            **input_values,
+            "prediction": prediction,
+            "probabilities": probabilities,
+            "recommendation": recommendation,
+            "source": "manual"
+        }
 
+        supabase.table("vehicle_assessments").insert(
+            assessment
+        ).execute()
 
-        # --------------------------------------------------
-        # Return result to frontend
-        # --------------------------------------------------
-
+        # Return result to the frontend
         return jsonify({
             "prediction": prediction,
             "probabilities": probabilities,
-            "recommendation": recommendation
+            "recommendation": recommendation,
+            "saved": True
         })
 
-
-    except Exception as e:
-
-        print("Prediction error:", str(e))
-
+    except (TypeError, ValueError):
         return jsonify({
-            "error": str(e)
+            "error": "Please enter valid numeric values for all vehicle measurements."
+        }), 400
+
+    except Exception:
+        app.logger.exception("Prediction or database operation failed.")
+        return jsonify({
+            "error": "The assessment could not be completed or saved. Check the backend terminal."
         }), 500
 
 
 # --------------------------------------------------
-# Run Flask server
+# Run Flask server locally
 # --------------------------------------------------
 
 if __name__ == "__main__":
     app.run(
         host="127.0.0.1",
-        port=5000,
+        port=int(os.environ.get("PORT", 5000)),
         debug=True
     )

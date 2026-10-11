@@ -1,18 +1,23 @@
+
 // NAEVIS Backend API
 const API_URL = "http://127.0.0.1:5000/predict";
 
 let probabilityChart;
 let featureChart;
 
-
 // --------------------------------------------------
 // Probability Chart
 // --------------------------------------------------
 
 function createProbabilityChart() {
-    const ctx = document.getElementById("probabilityChart");
+    const canvas = document.getElementById("probabilityChart");
 
-    probabilityChart = new Chart(ctx, {
+    if (!canvas) {
+        console.error("Missing canvas: probabilityChart");
+        return;
+    }
+
+    probabilityChart = new Chart(canvas, {
         type: "doughnut",
         data: {
             labels: [
@@ -41,15 +46,19 @@ function createProbabilityChart() {
     });
 }
 
-
 // --------------------------------------------------
 // Feature Chart
 // --------------------------------------------------
 
 function createFeatureChart() {
-    const ctx = document.getElementById("featureChart");
+    const canvas = document.getElementById("featureChart");
 
-    featureChart = new Chart(ctx, {
+    if (!canvas) {
+        console.error("Missing canvas: featureChart");
+        return;
+    }
+
+    featureChart = new Chart(canvas, {
         type: "bar",
         data: {
             labels: [
@@ -101,7 +110,6 @@ function createFeatureChart() {
     });
 }
 
-
 // --------------------------------------------------
 // Get Form Data
 // --------------------------------------------------
@@ -120,29 +128,26 @@ function getFormData() {
     };
 }
 
-
 // --------------------------------------------------
 // Send Data to NAEVIS Model
 // --------------------------------------------------
 
 async function runAssessment() {
-
     const data = getFormData();
 
-    // Show temporary loading state
-    document.getElementById("predictionLabel").textContent =
-        "Analyzing...";
+    const predictionLabel = document.getElementById("predictionLabel");
+    const predictionText = document.getElementById("predictionText");
+    const resultIcon = document.getElementById("resultIcon");
+    const recommendationText = document.getElementById("recommendationText");
 
-    document.getElementById("predictionText").textContent =
-        "The NAEVIS model is analyzing the vehicle data.";
-
-    document.getElementById("resultIcon").textContent =
-        "...";
-
-    document.getElementById("recommendationText").textContent =
-        "Please wait while the model generates a recommendation.";
+    predictionLabel.textContent = "Analyzing...";
+    predictionText.textContent = "The NAEVIS model is analyzing the vehicle data.";
+    resultIcon.textContent = "...";
+    recommendationText.textContent = "Please wait while the model generates a recommendation.";
 
     try {
+        console.log("Sending NAEVIS assessment to:", API_URL);
+        console.log("Vehicle input:", data);
 
         const response = await fetch(API_URL, {
             method: "POST",
@@ -152,173 +157,146 @@ async function runAssessment() {
             body: JSON.stringify(data)
         });
 
-        // Check if Flask returned an HTTP error
+        // Read the response body once
+        const result = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-
-            const errorData = await response.json().catch(() => ({}));
-
             throw new Error(
-                errorData.error ||
-                `Server returned status ${response.status}`
+                result.error ||
+                result.message ||
+                `Backend returned HTTP ${response.status}.`
             );
         }
 
-        const result = await response.json();
+        if (!result.prediction) {
+            throw new Error("The backend response did not contain a prediction.");
+        }
 
-        console.log("NAEVIS prediction:", result);
+        console.log("NAEVIS prediction response:", result);
 
-        // Update the dashboard with the real model result
+        // Update dashboard
         updateResults(result);
-
-        // Update feature chart using entered values
         updateFeatureChart(data);
 
+        // Update input summary
+        updateSummary();
+
         // Scroll to results
-        document.getElementById("results").scrollIntoView({
-            behavior: "smooth"
-        });
+        const resultsSection = document.getElementById("results");
+
+        if (resultsSection) {
+            resultsSection.scrollIntoView({
+                behavior: "smooth"
+            });
+        }
+
+        // Warn if the API returned a prediction but did not confirm saving
+        if (result.saved === false) {
+            console.warn("Prediction returned, but saving was not confirmed.");
+        }
 
     } catch (error) {
+        console.error("NAEVIS request failed:", error);
 
-        console.error("NAEVIS API error:", error);
+        predictionLabel.textContent = "Assessment Failed";
+        resultIcon.textContent = "!";
+        predictionText.textContent = error.message;
+        recommendationText.textContent =
+            "The assessment could not be completed. Check the browser console and Flask terminal for details.";
 
-        document.getElementById("predictionLabel").textContent =
-            "Prediction Error";
-
-        document.getElementById("predictionText").textContent =
-            "Unable to connect to the NAEVIS prediction service.";
-
-        document.getElementById("resultIcon").textContent =
-            "!";
-
-        document.getElementById("recommendationText").textContent =
-            "Please make sure the NAEVIS Flask backend is running on http://127.0.0.1:5000.";
+        // Only show the connection-specific message for network failures
+        if (error instanceof TypeError) {
+            predictionText.textContent =
+                "Could not reach the backend. Check that Flask is running at http://127.0.0.1:5000 and inspect the browser console for network or CORS errors.";
+        }
 
         alert(
-            "Unable to connect to the NAEVIS backend.\n\n" +
-            "Make sure app.py is running."
+            "NAEVIS assessment failed.\n\n" +
+            error.message +
+            "\n\nCheck the browser console (F12) and the Flask terminal for details."
         );
     }
 }
-
 
 // --------------------------------------------------
 // Update Prediction Results
 // --------------------------------------------------
 
 function updateResults(result) {
-
     const prediction = result.prediction;
 
-    // Prediction label
-    document.getElementById("predictionLabel").textContent =
-        prediction;
+    document.getElementById("predictionLabel").textContent = prediction;
 
-    // Prediction description
     if (prediction === "Good Condition") {
-
         document.getElementById("predictionText").textContent =
             "The vehicle is currently classified as being in good condition.";
 
-        document.getElementById("resultIcon").textContent =
-            "✓";
+        document.getElementById("resultIcon").textContent = "✓";
 
     } else if (prediction === "Monitor") {
-
         document.getElementById("predictionText").textContent =
             "The vehicle should be monitored closely for possible maintenance concerns.";
 
-        document.getElementById("resultIcon").textContent =
-            "!";
+        document.getElementById("resultIcon").textContent = "!";
 
     } else if (prediction === "Needs Maintenance") {
-
         document.getElementById("predictionText").textContent =
             "The vehicle requires maintenance attention based on the model prediction.";
 
-        document.getElementById("resultIcon").textContent =
-            "!";
+        document.getElementById("resultIcon").textContent = "!";
 
     } else {
-
         document.getElementById("predictionText").textContent =
             "The NAEVIS model returned a prediction.";
 
-        document.getElementById("resultIcon").textContent =
-            "?";
+        document.getElementById("resultIcon").textContent = "?";
     }
 
-
-    // --------------------------------------------------
-    // Update Probability Chart
-    // --------------------------------------------------
-
+    // Update probability chart
     if (result.probabilities && probabilityChart) {
-
         probabilityChart.data.datasets[0].data = [
-
             result.probabilities["Good Condition"] || 0,
-
             result.probabilities["Monitor"] || 0,
-
             result.probabilities["Needs Maintenance"] || 0
-
         ];
 
         probabilityChart.update();
     }
 
-
-    // --------------------------------------------------
-    // Update Recommendation
-    // --------------------------------------------------
-
+    // Update recommendation
     document.getElementById("recommendationText").textContent =
         result.recommendation ||
         "No recommendation was returned by the backend.";
 }
-
 
 // --------------------------------------------------
 // Update Feature Chart
 // --------------------------------------------------
 
 function updateFeatureChart(data) {
-
     if (!featureChart) {
         return;
     }
 
     featureChart.data.datasets[0].data = [
-
         Number(data.mileage) || 0,
-
         Number(data.fuel_consumption) || 0,
-
         Number(data.engine_temperature) || 0,
-
         Number(data.maintenance_history) || 0,
-
         Number(data.usage_frequency) || 0,
-
         Number(data.load_weight) || 0,
-
         Number(data.vehicle_age) || 0,
-
         Number(data.breakdown_history) || 0
-
     ];
 
     featureChart.update();
 }
-
 
 // --------------------------------------------------
 // Update Input Summary
 // --------------------------------------------------
 
 function updateSummary() {
-
     const fields = [
         "vehicle_type",
         "mileage",
@@ -332,25 +310,20 @@ function updateSummary() {
     ];
 
     fields.forEach(field => {
-
         const element = document.getElementById(field);
         const summaryElement = document.getElementById("sum_" + field);
 
         if (element && summaryElement) {
-
-            summaryElement.textContent =
-                element.value || "-";
+            summaryElement.textContent = element.value || "-";
         }
     });
 }
-
 
 // --------------------------------------------------
 // Clear Form
 // --------------------------------------------------
 
 function clearForm() {
-
     document.getElementById("assessmentForm").reset();
 
     updateSummary();
@@ -361,68 +334,58 @@ function clearForm() {
     document.getElementById("predictionText").textContent =
         "Run an assessment to receive the vehicle condition prediction.";
 
-    document.getElementById("resultIcon").textContent =
-        "?";
+    document.getElementById("resultIcon").textContent = "?";
 
     document.getElementById("recommendationText").textContent =
         "Run an assessment to receive maintenance guidance from the NAEVIS model.";
 
-    // Reset probability chart
     if (probabilityChart) {
-
-        probabilityChart.data.datasets[0].data =
-            [0, 0, 0];
-
+        probabilityChart.data.datasets[0].data = [0, 0, 0];
         probabilityChart.update();
     }
 
-    // Reset feature chart
     if (featureChart) {
-
-        featureChart.data.datasets[0].data =
-            [0, 0, 0, 0, 0, 0, 0, 0];
-
+        featureChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0];
         featureChart.update();
     }
 }
-
 
 // --------------------------------------------------
 // Navigation
 // --------------------------------------------------
 
 function goTo(sectionId) {
+    const section = document.getElementById(sectionId);
 
-    document.getElementById(sectionId).scrollIntoView({
-        behavior: "smooth"
-    });
+    if (section) {
+        section.scrollIntoView({
+            behavior: "smooth"
+        });
+    }
 }
 
-
 // --------------------------------------------------
-// Form Events
+// Initialize Dashboard and Form Events
 // --------------------------------------------------
 
-document
-    .getElementById("assessmentForm")
-    .addEventListener("input", updateSummary);
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("assessmentForm");
 
+    if (!form) {
+        console.error("NAEVIS form not found: assessmentForm");
+        return;
+    }
 
-document
-    .getElementById("assessmentForm")
-    .addEventListener("submit", function(event) {
+    form.addEventListener("input", updateSummary);
 
+    form.addEventListener("submit", function (event) {
         event.preventDefault();
-
-        // Run the REAL NAEVIS model
         runAssessment();
     });
 
+    createProbabilityChart();
+    createFeatureChart();
+    updateSummary();
 
-// --------------------------------------------------
-// Initialize Dashboard
-// --------------------------------------------------
-
-createProbabilityChart();
-createFeatureChart();
-updateSummary();
+    console.log("NAEVIS frontend initialized.");
+});
