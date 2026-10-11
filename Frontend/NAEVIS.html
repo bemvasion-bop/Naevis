@@ -1,307 +1,623 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>NAEVIS | Vehicle Maintenance Assistant</title>
 
-    <!-- #placeholder: Chart.js is used for the result graphs. -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link rel="stylesheet" href="style.css">
+
 </head>
 
 <body>
+
 <div class="app">
 
-    <!-- #placeholder: Navigation items currently scroll to sections on this page. -->
     <aside class="sidebar">
+
         <div class="brand">
+
             <div class="brand-logo">N</div>
+
             <div class="brand-text">
+
                 <h1>NAEVIS</h1>
+
                 <span>Vehicle Maintenance</span>
+
             </div>
+
         </div>
 
         <div class="nav-title">Navigation</div>
 
         <button class="nav-link active" onclick="goTo('dashboard')">Dashboard</button>
+
         <button class="nav-link" onclick="goTo('assessment')">Vehicle Assessment</button>
+
         <button class="nav-link" onclick="goTo('results')">Results & Analysis</button>
+
         <button class="nav-link" onclick="goTo('history')">Assessment History</button>
+
     </aside>
 
     <main class="main">
 
         <header class="topbar">
+
             <div class="topbar-title">Vehicle Maintenance Assistant</div>
 
-            <!-- #placeholder: This status will become "Model Connected" when the Python API is connected. -->
             <div class="model-status">
+
                 <span class="status-dot"></span>
-                Model Connection
+
+                Model Connected
+
             </div>
+
         </header>
 
         <div class="content">
 
+            <!-- ==================================================
+                 DASHBOARD
+            =================================================== -->
+
             <section id="dashboard">
+
                 <div class="hero">
+
                     <h2>Vehicle Condition Assessment</h2>
+
                     <p>
                         Enter the vehicle information below to assess its current maintenance
                         condition using the NAEVIS prediction model.
                     </p>
 
-                    <!-- #placeholder: Remove this badge when the actual model/backend is connected. -->
                     <div class="placeholder-badge">
-                        MODEL OUTPUT
+                        MODEL CONNECTED
                     </div>
+
                 </div>
 
                 <div class="kpi-grid">
+
                     <div class="card">
+
                         <div class="kpi-label">Model Inputs</div>
+
                         <div class="kpi-value">9</div>
+
                         <div class="kpi-sub">Required vehicle features</div>
+
                     </div>
 
                     <div class="card">
+
                         <div class="kpi-label">Prediction Classes</div>
+
                         <div class="kpi-value">3</div>
+
                         <div class="kpi-sub">Good, Monitor, Maintenance</div>
+
                     </div>
 
                     <div class="card">
+
                         <div class="kpi-label">Assessment Status</div>
+
                         <div class="kpi-value">Ready</div>
-                        <div class="kpi-sub">Waiting for vehicle data</div>
+
+                        <div class="kpi-sub">Backend connected and ready</div>
+
                     </div>
 
                     <div class="card">
+
                         <div class="kpi-label">Model</div>
+
                         <div class="kpi-value">NAEVIS</div>
-                        <div class="kpi-sub">Vehicle maintenance classifier</div>
+
+                        <div class="kpi-sub">XGBoost vehicle maintenance classifier</div>
+
                     </div>
+
                 </div>
+
             </section>
 
+
+            <!-- ==================================================
+                 VEHICLE ASSESSMENT
+            =================================================== -->
+
             <section class="section" id="assessment">
+
                 <div class="section-heading">
+
                     <div>
+
                         <h3>Vehicle Assessment</h3>
+
                         <p>Provide the nine inputs required by the NAEVIS model.</p>
+
                     </div>
+
                 </div>
 
                 <div class="assessment-layout">
 
                     <div class="card">
+
                         <form id="assessmentForm">
 
                             <div class="form-grid">
 
-                                <!-- #placeholder: vehicle_type must be sent to the backend using this exact feature name. -->
                                 <div class="field">
+
                                     <label for="vehicle_type">Vehicle Type</label>
+
                                     <select id="vehicle_type" name="vehicle_type" required>
+
                                         <option value="">Select vehicle type</option>
+
                                         <option value="Car">Car</option>
+
                                         <option value="Truck">Truck</option>
+
                                         <option value="Van">Van</option>
+
                                         <option value="Bus">Bus</option>
+
                                         <option value="Motorcycle">Motorcycle</option>
+
                                     </select>
+
                                 </div>
 
-                                <!-- #placeholder: mileage -->
+
                                 <div class="field">
+
                                     <label for="mileage">Mileage</label>
-                                    <input type="number" id="mileage" name="mileage" min="0" step="1" placeholder="e.g. 45000" required>
+
+                                    <input
+                                        type="number"
+                                        id="mileage"
+                                        name="mileage"
+                                        min="0"
+                                        step="1"
+                                        placeholder="e.g. 45000"
+                                        required
+                                    >
+
                                     <small>Vehicle mileage</small>
+
                                 </div>
 
-                                <!-- #placeholder: fuel_consumption -->
+
                                 <div class="field">
+
                                     <label for="fuel_consumption">Fuel Consumption</label>
-                                    <input type="number" id="fuel_consumption" name="fuel_consumption" min="0" step="0.01" placeholder="e.g. 7.5" required>
+
+                                    <input
+                                        type="number"
+                                        id="fuel_consumption"
+                                        name="fuel_consumption"
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="e.g. 7.5"
+                                        required
+                                    >
+
                                     <small>Fuel consumption value</small>
+
                                 </div>
 
-                                <!-- #placeholder: engine_temperature -->
+
                                 <div class="field">
+
                                     <label for="engine_temperature">Engine Temperature</label>
-                                    <input type="number" id="engine_temperature" name="engine_temperature" step="0.1" placeholder="e.g. 90" required>
+
+                                    <input
+                                        type="number"
+                                        id="engine_temperature"
+                                        name="engine_temperature"
+                                        step="0.1"
+                                        placeholder="e.g. 90"
+                                        required
+                                    >
+
                                     <small>Engine temperature</small>
+
                                 </div>
 
-                                <!-- #placeholder: maintenance_history -->
+
                                 <div class="field">
+
                                     <label for="maintenance_history">Maintenance History</label>
-                                    <input type="number" id="maintenance_history" name="maintenance_history" min="0" step="1" placeholder="e.g. 5" required>
+
+                                    <input
+                                        type="number"
+                                        id="maintenance_history"
+                                        name="maintenance_history"
+                                        min="0"
+                                        step="1"
+                                        placeholder="e.g. 5"
+                                        required
+                                    >
+
                                     <small>Number/value from maintenance history</small>
+
                                 </div>
 
-                                <!-- #placeholder: usage_frequency -->
+
                                 <div class="field">
+
                                     <label for="usage_frequency">Usage Frequency</label>
-                                    <input type="number" id="usage_frequency" name="usage_frequency" min="0" step="0.1" placeholder="e.g. 5" required>
+
+                                    <input
+                                        type="number"
+                                        id="usage_frequency"
+                                        name="usage_frequency"
+                                        min="0"
+                                        step="0.1"
+                                        placeholder="e.g. 5"
+                                        required
+                                    >
+
                                     <small>How frequently the vehicle is used</small>
+
                                 </div>
 
-                                <!-- #placeholder: load_weight -->
+
                                 <div class="field">
+
                                     <label for="load_weight">Load Weight</label>
-                                    <input type="number" id="load_weight" name="load_weight" min="0" step="0.1" placeholder="e.g. 500" required>
+
+                                    <input
+                                        type="number"
+                                        id="load_weight"
+                                        name="load_weight"
+                                        min="0"
+                                        step="0.1"
+                                        placeholder="e.g. 500"
+                                        required
+                                    >
+
                                     <small>Vehicle load weight</small>
+
                                 </div>
 
-                                <!-- #placeholder: vehicle_age -->
+
                                 <div class="field">
+
                                     <label for="vehicle_age">Vehicle Age</label>
-                                    <input type="number" id="vehicle_age" name="vehicle_age" min="0" step="1" placeholder="e.g. 5" required>
+
+                                    <input
+                                        type="number"
+                                        id="vehicle_age"
+                                        name="vehicle_age"
+                                        min="0"
+                                        step="1"
+                                        placeholder="e.g. 5"
+                                        required
+                                    >
+
                                     <small>Age of vehicle</small>
+
                                 </div>
 
-                                <!-- #placeholder: breakdown_history -->
+
                                 <div class="field">
+
                                     <label for="breakdown_history">Breakdown History</label>
-                                    <input type="number" id="breakdown_history" name="breakdown_history" min="0" step="1" placeholder="e.g. 2" required>
+
+                                    <input
+                                        type="number"
+                                        id="breakdown_history"
+                                        name="breakdown_history"
+                                        min="0"
+                                        step="1"
+                                        placeholder="e.g. 2"
+                                        required
+                                    >
+
                                     <small>Previous breakdown count/value</small>
+
                                 </div>
 
                             </div>
+
 
                             <div class="actions">
-                                <!-- #placeholder: Replace showPlaceholder() with the API request when the backend is ready. -->
+
                                 <button type="submit" class="btn btn-primary">
+
                                     Run Assessment
+
                                 </button>
 
-                                <button type="button" class="btn btn-secondary" onclick="clearForm()">
+
+                                <button
+                                    type="button"
+                                    class="btn btn-secondary"
+                                    onclick="clearForm()"
+                                >
+
                                     Clear
+
                                 </button>
+
                             </div>
+
                         </form>
+
                     </div>
 
+
+                    <!-- INPUT SUMMARY -->
+
                     <div class="card input-summary">
+
                         <div class="section-heading">
+
                             <div>
+
                                 <h3>Input Summary</h3>
+
                                 <p>Current values entered above.</p>
+
                             </div>
+
                         </div>
 
                         <ul class="summary-list" id="summaryList">
-                            <li><span>Vehicle Type</span><span id="sum_vehicle_type">-</span></li>
-                            <li><span>Mileage</span><span id="sum_mileage">-</span></li>
-                            <li><span>Fuel Consumption</span><span id="sum_fuel_consumption">-</span></li>
-                            <li><span>Engine Temperature</span><span id="sum_engine_temperature">-</span></li>
-                            <li><span>Maintenance History</span><span id="sum_maintenance_history">-</span></li>
-                            <li><span>Usage Frequency</span><span id="sum_usage_frequency">-</span></li>
-                            <li><span>Load Weight</span><span id="sum_load_weight">-</span></li>
-                            <li><span>Vehicle Age</span><span id="sum_vehicle_age">-</span></li>
-                            <li><span>Breakdown History</span><span id="sum_breakdown_history">-</span></li>
+
+                            <li>
+                                <span>Vehicle Type</span>
+                                <span id="sum_vehicle_type">-</span>
+                            </li>
+
+                            <li>
+                                <span>Mileage</span>
+                                <span id="sum_mileage">-</span>
+                            </li>
+
+                            <li>
+                                <span>Fuel Consumption</span>
+                                <span id="sum_fuel_consumption">-</span>
+                            </li>
+
+                            <li>
+                                <span>Engine Temperature</span>
+                                <span id="sum_engine_temperature">-</span>
+                            </li>
+
+                            <li>
+                                <span>Maintenance History</span>
+                                <span id="sum_maintenance_history">-</span>
+                            </li>
+
+                            <li>
+                                <span>Usage Frequency</span>
+                                <span id="sum_usage_frequency">-</span>
+                            </li>
+
+                            <li>
+                                <span>Load Weight</span>
+                                <span id="sum_load_weight">-</span>
+                            </li>
+
+                            <li>
+                                <span>Vehicle Age</span>
+                                <span id="sum_vehicle_age">-</span>
+                            </li>
+
+                            <li>
+                                <span>Breakdown History</span>
+                                <span id="sum_breakdown_history">-</span>
+                            </li>
+
                         </ul>
+
                     </div>
+
                 </div>
+
             </section>
 
+
+            <!-- ==================================================
+                 RESULTS & ANALYSIS
+            =================================================== -->
+
             <section class="section" id="results">
+
                 <div class="section-heading">
+
                     <div>
+
                         <h3>Results & Analysis</h3>
-                        <p>Prediction and visual analysis will appear here after assessment.</p>
+
+                        <p>
+                            Prediction and visual analysis generated by the NAEVIS model.
+                        </p>
+
                     </div>
+
                 </div>
 
                 <div class="results-grid">
 
+
+                    <!-- PREDICTION RESULT -->
+
                     <div class="card">
-                        <!-- #placeholder: Actual prediction returned by naevis_model.pkl will replace this result. -->
+
                         <div class="result-status">
+
                             <div>
-                                <h4 id="predictionLabel">Awaiting Assessment</h4>
+
+                                <h4 id="predictionLabel">
+                                    Awaiting Assessment
+                                </h4>
+
                                 <p id="predictionText">
                                     Run an assessment to receive the vehicle condition prediction.
                                 </p>
+
                             </div>
 
-                            <div class="result-icon" id="resultIcon">?</div>
+                            <div class="result-icon" id="resultIcon">
+                                ?
+                            </div>
+
                         </div>
 
-                        <!-- #placeholder: Actual model recommendation will be displayed here. -->
+
                         <div class="recommendation">
+
                             <strong>Recommendation</strong>
+
                             <p id="recommendationText">
-                                Model recommendation placeholder. This area will contain
-                                maintenance guidance returned by the backend.
+                                Run an assessment to receive maintenance guidance from the NAEVIS model.
                             </p>
+
                         </div>
+
                     </div>
 
+
+                    <!-- PROBABILITY CHART -->
+
                     <div class="card">
+
                         <h3>Prediction Probability</h3>
 
-                        <!-- #placeholder: These are placeholder probability values only. -->
                         <div class="chart-box">
+
                             <canvas id="probabilityChart"></canvas>
+
                         </div>
+
                     </div>
 
+
+                    <!-- FEATURE CHART -->
+
                     <div class="card">
+
                         <h3>Input Feature Overview</h3>
 
-                        <!-- #placeholder: Replace placeholder chart values with actual model/result data if needed. -->
                         <div class="chart-box">
+
                             <canvas id="featureChart"></canvas>
+
                         </div>
+
                     </div>
 
+
+                    <!-- MODEL OUTPUT -->
+
                     <div class="card">
+
                         <h3>Model Output</h3>
-                        <p style="color: var(--muted); font-size: 12px; line-height: 1.7; margin-top: 12px;">
-                            This section is prepared for the actual prediction response.
-                            The HTML frontend is currently not directly loading the
-                            <strong style="color: var(--text);">naevis_model.pkl</strong> file.
+
+                        <p
+                            style="
+                                color: var(--muted);
+                                font-size: 12px;
+                                line-height: 1.7;
+                                margin-top: 12px;
+                            "
+                        >
+                            This result is generated by the trained XGBoost model
+                            through the NAEVIS Flask API.
                         </p>
 
-                        <!-- #placeholder: Backend connection will send prediction JSON to this frontend. -->
-                        <div class="recommendation">
-                            <strong>Backend Connection Placeholder</strong>
+                        <div class="model-output-content">
+
+                            <h3>NAEVIS Model Output</h3>
+
                             <p>
-                                HTML → JavaScript → Python API → naevis_model.pkl → prediction → HTML
+                                The prediction shown above is generated by the trained
+                                XGBoost model through the NAEVIS Flask API.
                             </p>
+
+                            <p>
+
+                                <strong>Pipeline:</strong>
+
+                                Input Data → JavaScript → Flask API →
+                                Preprocessor → XGBoost → Prediction → Dashboard
+
+                            </p>
+
                         </div>
+
                     </div>
 
                 </div>
+
             </section>
 
+
+            <!-- ==================================================
+                 ASSESSMENT HISTORY
+            =================================================== -->
+
             <section class="section" id="history">
+
                 <div class="section-heading">
+
                     <div>
+
                         <h3>Assessment History</h3>
-                        <p>Previous vehicle assessments can be displayed here later.</p>
+
+                        <p>
+                            Previous vehicle assessments can be displayed here later.
+                        </p>
+
                     </div>
+
                 </div>
 
                 <div class="card history-empty">
-                    <!-- #placeholder: Connect this section to a database/local storage later. -->
+
                     <strong>No assessment history yet</strong>
+
                     Previous prediction records will appear here once storage is connected.
+
                 </div>
+
             </section>
 
+
+            <!-- FOOTER -->
+
             <div class="footer">
+
                 NAEVIS Vehicle Maintenance Assistant
+
             </div>
+
         </div>
+
     </main>
+
 </div>
 
+
 <script src="script.js"></script>
+
 </body>
+
 </html>

@@ -1,0 +1,3 @@
+cd C:\Users\Bemvasion\IT20\NAEVIS
+.\.venv\Scripts\Activate.ps1
+python -m pip freeze > Backend\requirements.txt
