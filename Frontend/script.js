@@ -1,6 +1,6 @@
 
 // NAEVIS Backend API
-const API_URL = "http://127.0.0.1:5000/predict";
+const API_URL = "https://naevis-api.onrender.com/predict";
 
 let probabilityChart;
 let featureChart;
